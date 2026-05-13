@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg-primary: #faf9f6;
+    --text-primary: #1f2937;
+    --bg-card: #ffffff;
+    --border-color: #e5e7eb;
+    --accent-green: #a8d5ba;
+    --accent-orange: #fbc490;
+    --input-bg: #ffffff;
+    --hover-bg: #f3f4f6;
+  }
+
+  .dark {
+    --bg-primary: #121212;
+    --text-primary: #f3f4f6;
+    --bg-card: #1e1e1e;
+    --border-color: #374151;
+    --accent-green: #3f7b58;
+    --accent-orange: #b36720;
+    --input-bg: #2d2d2d;
+    --hover-bg: #2d2d2d;
+  }
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.card {
+  @apply rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] shadow-sm;
+}
+
+.input {
+  @apply w-full rounded-lg border border-[var(--border-color)] bg-[var(--input-bg)] px-4 py-2 focus:outline-none focus:ring-2 focus:ring-soft-green;
+}
+
+.btn-primary {
+  @apply rounded-lg bg-soft-green px-4 py-2 font-medium text-gray-900 transition-colors hover:bg-opacity-90 disabled:opacity-50;
+}
+
+.btn-secondary {
+  @apply rounded-lg border border-[var(--border-color)] bg-transparent px-4 py-2 font-medium transition-colors hover:bg-[var(--hover-bg)] disabled:opacity-50;
+}
