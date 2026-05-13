@@ -79,8 +79,8 @@ export default function UpdatePassword() {
 
       <div className="card w-full max-w-md p-8">
         <div className="mb-8 flex flex-col items-center">
-          <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-white shadow-xl shadow-soft-green/10 mb-4 overflow-hidden border border-[var(--border-color)]">
-            <img src="/logo.png" alt="Gastos Logo" className="w-14 h-14 object-contain" />
+          <div className="flex h-32 w-32 items-center justify-center mb-4 transition-all">
+            <img src="/logo.png" alt="Gastos Logo" className="w-full h-full object-contain rounded-3xl shadow-2xl shadow-soft-green/20" />
           </div>
           <h1 className="text-2xl font-bold">Update Password</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 text-center">
