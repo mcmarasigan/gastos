@@ -1,6 +1,8 @@
-# Gastos 💸
-
-An AI-powered personal expense tracker and budget advisor designed for Filipinos, built with React, Supabase, and the Google Gemini API.
+<div align="center">
+  <img src="public/logo.png" alt="Gastos Logo" width="120" />
+  <h1>Gastos 💸</h1>
+  <p>An AI-powered personal expense tracker and budget advisor designed for Filipinos, built with React, Supabase, and the Google Gemini API.</p>
+</div>
 
 ## Features ✨
 
