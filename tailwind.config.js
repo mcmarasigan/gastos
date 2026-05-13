@@ -8,9 +8,12 @@ export default {
   theme: {
     extend: {
       colors: {
-        'off-white': '#faf9f6',
-        'soft-green': '#a8d5ba',
-        'soft-orange': '#fbc490',
+        'off-white': '#F8FAFC',
+        'soft-green': '#10B981', // Emerald 500
+        'soft-orange': '#8B5CF6', // Violet 500
+      },
+      fontFamily: {
+        sans: ['Inter', 'sans-serif'],
       }
     },
   },

@@ -1,50 +1,79 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --bg-primary: #faf9f6;
-    --text-primary: #1f2937;
-    --bg-card: #ffffff;
-    --border-color: #e5e7eb;
-    --accent-green: #a8d5ba;
-    --accent-orange: #fbc490;
-    --input-bg: #ffffff;
-    --hover-bg: #f3f4f6;
+    --bg-primary: #F8FAFC; /* Slate 50 */
+    --text-primary: #0F172A; /* Slate 900 */
+    --bg-card: rgba(255, 255, 255, 0.9);
+    --border-color: #E2E8F0; /* Slate 200 */
+    --accent-green: #10B981;
+    --accent-orange: #8B5CF6;
+    --input-bg: #FFFFFF;
+    --hover-bg: #F1F5F9; /* Slate 100 */
   }
 
   .dark {
-    --bg-primary: #121212;
-    --text-primary: #f3f4f6;
-    --bg-card: #1e1e1e;
-    --border-color: #374151;
-    --accent-green: #3f7b58;
-    --accent-orange: #b36720;
-    --input-bg: #2d2d2d;
-    --hover-bg: #2d2d2d;
+    --bg-primary: #0B0F19; /* Very deep modern blue/black */
+    --text-primary: #F8FAFC;
+    --bg-card: rgba(17, 24, 39, 0.7); /* Gray 900 with transparency */
+    --border-color: #1E293B; /* Slate 800 */
+    --accent-green: #34D399; /* Lighter emerald for dark mode */
+    --accent-orange: #A78BFA; /* Lighter violet for dark mode */
+    --input-bg: #1E293B;
+    --hover-bg: #1E293B;
   }
 }
 
 body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
-  font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  transition: background-color 0.4s ease, color 0.4s ease;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
+/* Glassmorphism Cards */
 .card {
-  @apply rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] shadow-sm;
+  @apply rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] shadow-sm backdrop-blur-md transition-all duration-300;
+}
+
+.dark .card {
+  @apply shadow-none;
 }
 
 .input {
-  @apply w-full rounded-lg border border-[var(--border-color)] bg-[var(--input-bg)] px-4 py-2 focus:outline-none focus:ring-2 focus:ring-soft-green;
+  @apply w-full rounded-xl border border-[var(--border-color)] bg-[var(--input-bg)] px-4 py-3 focus:outline-none focus:ring-2 focus:ring-soft-green focus:border-transparent transition-all;
 }
 
 .btn-primary {
-  @apply rounded-lg bg-soft-green px-4 py-2 font-medium text-gray-900 transition-colors hover:bg-opacity-90 disabled:opacity-50;
+  @apply rounded-xl bg-soft-green px-5 py-3 font-semibold text-white transition-all duration-300 hover:bg-[#059669] hover:shadow-lg hover:shadow-soft-green/30 disabled:opacity-50 disabled:hover:shadow-none;
+}
+
+.dark .btn-primary {
+  @apply text-gray-900 hover:bg-[#34D399];
 }
 
 .btn-secondary {
-  @apply rounded-lg border border-[var(--border-color)] bg-transparent px-4 py-2 font-medium transition-colors hover:bg-[var(--hover-bg)] disabled:opacity-50;
+  @apply rounded-xl border border-[var(--border-color)] bg-transparent px-5 py-3 font-semibold transition-all hover:bg-[var(--hover-bg)] disabled:opacity-50;
+}
+
+/* Custom Scrollbar for a premium feel */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
 }

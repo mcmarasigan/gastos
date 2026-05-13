@@ -27,8 +27,8 @@ export default function Layout() {
       {/* Sidebar for desktop */}
       <aside className="hidden w-64 flex-col border-r border-[var(--border-color)] bg-[var(--bg-card)] md:flex">
         <div className="flex h-16 items-center justify-between px-6 border-b border-[var(--border-color)]">
-          <span className="text-2xl font-bold text-soft-green flex items-center gap-2">
-            <Lightbulb className="text-soft-orange" />
+          <span className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <img src="/logo.png" alt="Gastos Logo" className="w-8 h-8 object-contain" />
             Gastos
           </span>
           <button onClick={toggleTheme} className="p-2 rounded-full hover:bg-[var(--hover-bg)]">
@@ -70,7 +70,10 @@ export default function Layout() {
       <main className="flex-1 overflow-y-auto pb-16 md:pb-0">
         {/* Mobile Header */}
         <div className="md:hidden flex h-16 items-center justify-between px-4 border-b border-[var(--border-color)] bg-[var(--bg-card)] sticky top-0 z-10">
-          <span className="text-xl font-bold text-soft-green">Gastos</span>
+          <span className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <img src="/logo.png" alt="Gastos Logo" className="w-7 h-7 object-contain" />
+            Gastos
+          </span>
           <button onClick={toggleTheme} className="p-2 rounded-full hover:bg-[var(--hover-bg)]">
             {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
           </button>

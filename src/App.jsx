@@ -9,6 +9,7 @@ import LogExpense from './pages/LogExpense';
 import Transactions from './pages/Transactions';
 import BudgetAdvisor from './pages/BudgetAdvisor';
 import Settings from './pages/Settings';
+import UpdatePassword from './pages/UpdatePassword';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -28,6 +29,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/update-password" element={<UpdatePassword />} />
       <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
         <Route index element={<Dashboard />} />
         <Route path="log" element={<LogExpense />} />
