@@ -11,25 +11,44 @@ export default function BudgetAdvisor() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [fetching, setFetching] = useState(true);
+  const [adviceHistory, setAdviceHistory] = useState([]);
 
   useEffect(() => {
-    fetchIncome();
+    fetchInitialData();
   }, [user]);
 
-  const fetchIncome = async () => {
+  const fetchInitialData = async () => {
     try {
-      const { data, error } = await supabase
+      // Fetch income
+      const { data: incomeData, error: incomeError } = await supabase
         .from('budget_settings')
         .select('monthly_income')
         .eq('user_id', user.id)
         .single();
       
-      if (error && error.code !== 'PGRST116') throw error;
-      if (data && data.monthly_income) {
-        setIncome(data.monthly_income);
+      if (incomeError && incomeError.code !== 'PGRST116') throw incomeError;
+      if (incomeData && incomeData.monthly_income) {
+        setIncome(incomeData.monthly_income);
+      }
+
+      // Fetch advice history
+      const { data: historyData, error: historyError } = await supabase
+        .from('advice_history')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (historyError) throw historyError;
+      
+      if (historyData) {
+        setAdviceHistory(historyData);
+        if (historyData.length > 0) {
+          // Show the most recent advice by default if we haven't generated a new one
+          setAdvice(historyData[0].advice);
+        }
       }
     } catch (err) {
-      console.error('Error fetching income:', err);
+      console.error('Error fetching data:', err);
     } finally {
       setFetching(false);
     }
@@ -37,7 +56,6 @@ export default function BudgetAdvisor() {
 
   const saveIncome = async (newIncome) => {
     try {
-      // Upsert budget settings
       const { error } = await supabase
         .from('budget_settings')
         .upsert({ user_id: user.id, monthly_income: newIncome }, { onConflict: 'user_id' });
@@ -56,13 +74,10 @@ export default function BudgetAdvisor() {
 
     setLoading(true);
     setError(null);
-    setAdvice('');
 
     try {
-      // 1. Save income
       await saveIncome(income);
 
-      // 2. Fetch current month expenses
       const now = new Date();
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
       const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString();
@@ -76,13 +91,23 @@ export default function BudgetAdvisor() {
 
       if (expensesError) throw expensesError;
 
-      // 3. Get advice from Gemini
       const geminiAdvice = await getBudgetAdviceWithGemini(income, expenses || []);
       setAdvice(geminiAdvice);
 
+      // Save to history table
+      const { data: newHistory, error: insertError } = await supabase
+        .from('advice_history')
+        .insert([{ user_id: user.id, advice: geminiAdvice }])
+        .select()
+        .single();
+        
+      if (!insertError && newHistory) {
+        setAdviceHistory([newHistory, ...adviceHistory]);
+      }
+
     } catch (err) {
       console.error('Error getting advice:', err);
-      setError('Failed to generate budget advice. Please try again.');
+      setError(err.message || 'Failed to generate budget advice. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -95,6 +120,20 @@ export default function BudgetAdvisor() {
       }
       return <p key={index} className="text-gray-600 dark:text-gray-300 ml-4 mb-2">{line}</p>;
     });
+  };
+
+  const deleteHistory = async (id) => {
+    if (!window.confirm('Delete this past advice?')) return;
+    try {
+      const { error } = await supabase.from('advice_history').delete().eq('id', id);
+      if (error) throw error;
+      setAdviceHistory(adviceHistory.filter(h => h.id !== id));
+      if (adviceHistory.length > 0 && adviceHistory[0].id === id) {
+        setAdvice(adviceHistory.length > 1 ? adviceHistory[1].advice : '');
+      }
+    } catch (err) {
+      console.error('Error deleting advice:', err);
+    }
   };
 
   if (fetching) return <div className="p-8">Loading advisor...</div>;
@@ -117,16 +156,15 @@ export default function BudgetAdvisor() {
 
       <div className="card p-6 mb-6">
         <label className="mb-2 block font-medium" htmlFor="income">
-          What is your estimated monthly income?
+          What is your estimated monthly income? (e.g. ₱35000)
         </label>
         <div className="flex gap-4">
           <div className="relative flex-1">
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">₱</span>
             <input
               id="income"
               type="number"
-              className="input pl-10 text-lg"
-              placeholder="e.g. 35000"
+              className="input text-lg"
+              placeholder="35000"
               value={income}
               onChange={(e) => setIncome(e.target.value)}
             />
@@ -137,7 +175,7 @@ export default function BudgetAdvisor() {
             className="btn-primary flex items-center gap-2 px-6"
           >
             {loading ? <Sparkles size={20} className="animate-spin" /> : <Lightbulb size={20} />}
-            {loading ? 'Analyzing...' : 'Get Advice'}
+            {loading ? 'Analyzing...' : 'Get Fresh Advice'}
           </button>
         </div>
       </div>
@@ -154,6 +192,42 @@ export default function BudgetAdvisor() {
           <ul className="list-none prose dark:prose-invert max-w-none">
             {formatAdvice(advice)}
           </ul>
+        </div>
+      )}
+
+      {adviceHistory.length > 0 && (
+        <div className="card overflow-hidden mt-8">
+          <div className="p-6 border-b border-[var(--border-color)] bg-gray-50 dark:bg-gray-800/50">
+            <h2 className="text-lg font-semibold">Past Advice History</h2>
+          </div>
+          <div className="p-4 space-y-4">
+            {adviceHistory.map((item) => (
+              <div key={item.id} className="border border-[var(--border-color)] rounded-lg p-4 hover:border-soft-orange transition-colors">
+                <div className="flex justify-between items-center mb-3">
+                  <span className="text-sm font-medium text-gray-500">
+                    Generated on {new Date(item.created_at).toLocaleDateString()} at {new Date(item.created_at).toLocaleTimeString()}
+                  </span>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => setAdvice(item.advice)}
+                      className="text-xs px-3 py-1 bg-soft-orange/10 text-soft-orange rounded-full hover:bg-soft-orange/20"
+                    >
+                      View Full
+                    </button>
+                    <button 
+                      onClick={() => deleteHistory(item.id)}
+                      className="text-xs px-3 py-1 bg-red-100 text-red-600 rounded-full hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2">
+                  {item.advice.replace(/[#*]/g, '')}
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

@@ -82,14 +82,13 @@ export default function Settings() {
         <div>
           <h2 className="text-xl font-semibold mb-4 border-b border-[var(--border-color)] pb-2">Budget Settings</h2>
           <div className="grid gap-2">
-            <label className="text-sm font-medium" htmlFor="income">Monthly Income</label>
+            <label className="text-sm font-medium" htmlFor="income">Monthly Income (e.g. ₱35000)</label>
             <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">₱</span>
               <input
                 id="income"
                 type="number"
-                className="input pl-10"
-                placeholder="0.00"
+                className="input"
+                placeholder="35000"
                 value={income}
                 onChange={(e) => setIncome(e.target.value)}
               />

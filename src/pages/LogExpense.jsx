@@ -24,9 +24,10 @@ export default function LogExpense() {
 
     try {
       const result = await parseExpenseWithGemini(input);
-      setParsedData(result);
+      const parsedArray = Array.isArray(result) ? result : [result];
+      setParsedData(parsedArray);
     } catch (err) {
-      setError('Could not understand the expense. Please try again or be more specific.');
+      setError(err.message || 'Could not understand the expense. Please try again or be more specific.');
     } finally {
       setLoading(false);
     }
@@ -37,16 +38,18 @@ export default function LogExpense() {
     setError(null);
 
     try {
+      const insertData = parsedData.map(item => ({
+        user_id: user.id,
+        raw_input: input,
+        amount: parseFloat(item.amount),
+        category: item.category,
+        description: item.description,
+        date: new Date().toISOString().split('T')[0]
+      }));
+
       const { error: dbError } = await supabase
         .from('expenses')
-        .insert([{
-          user_id: user.id,
-          raw_input: input,
-          amount: parseFloat(parsedData.amount),
-          category: parsedData.category,
-          description: parsedData.description,
-          date: new Date().toISOString().split('T')[0]
-        }]);
+        .insert(insertData);
 
       if (dbError) throw dbError;
 
@@ -114,45 +117,61 @@ export default function LogExpense() {
       </form>
 
       {parsedData && (
-        <div className="card p-6 border-soft-green">
-          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <Check className="text-soft-green" /> Confirm Expense
+        <div className="card p-6 border-soft-green space-y-6">
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <Check className="text-soft-green" /> Confirm Expenses ({parsedData.length})
           </h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            <div>
-              <label className="mb-1 block text-sm text-gray-500">Amount (₱)</label>
-              <input 
-                type="number" 
-                className="input text-xl font-bold" 
-                value={parsedData.amount || ''} 
-                onChange={(e) => setParsedData({...parsedData, amount: e.target.value})}
-              />
-            </div>
-            
-            <div>
-              <label className="mb-1 block text-sm text-gray-500">Category</label>
-              <select 
-                className="input" 
-                value={parsedData.category || 'Others'}
-                onChange={(e) => setParsedData({...parsedData, category: e.target.value})}
-              >
-                {categories.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
-            
-            <div className="md:col-span-2">
-              <label className="mb-1 block text-sm text-gray-500">Description</label>
-              <input 
-                type="text" 
-                className="input" 
-                value={parsedData.description || ''}
-                onChange={(e) => setParsedData({...parsedData, description: e.target.value})}
-              />
-            </div>
+          <div className="space-y-6">
+            {parsedData.map((item, index) => (
+              <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-6 border-b border-[var(--border-color)] last:border-0 last:pb-0">
+                <div>
+                  <label className="mb-1 block text-sm text-gray-500">Amount (₱)</label>
+                  <input 
+                    type="number" 
+                    className="input text-xl font-bold" 
+                    value={item.amount || ''} 
+                    onChange={(e) => {
+                      const newData = [...parsedData];
+                      newData[index].amount = e.target.value;
+                      setParsedData(newData);
+                    }}
+                  />
+                </div>
+                
+                <div>
+                  <label className="mb-1 block text-sm text-gray-500">Category</label>
+                  <select 
+                    className="input" 
+                    value={item.category || 'Others'}
+                    onChange={(e) => {
+                      const newData = [...parsedData];
+                      newData[index].category = e.target.value;
+                      setParsedData(newData);
+                    }}
+                  >
+                    {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+                
+                <div className="md:col-span-2">
+                  <label className="mb-1 block text-sm text-gray-500">Description</label>
+                  <input 
+                    type="text" 
+                    className="input" 
+                    value={item.description || ''}
+                    onChange={(e) => {
+                      const newData = [...parsedData];
+                      newData[index].description = e.target.value;
+                      setParsedData(newData);
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
           </div>
           
-          <div className="flex justify-end gap-3">
+          <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-[var(--border-color)]">
             <button 
               onClick={() => setParsedData(null)}
               className="btn-secondary"
@@ -165,7 +184,7 @@ export default function LogExpense() {
               className="btn-primary"
               disabled={loading}
             >
-              {loading ? 'Saving...' : 'Save Expense'}
+              {loading ? 'Saving...' : `Save ${parsedData.length} ${parsedData.length === 1 ? 'Expense' : 'Expenses'}`}
             </button>
           </div>
         </div>

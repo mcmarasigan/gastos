@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
+import { getSpendingSummaryWithGemini } from '../lib/gemini';
 import { PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
-import { Trash2, TrendingUp, TrendingDown, Wallet } from 'lucide-react';
+import { Trash2, TrendingUp, TrendingDown, Wallet, Sparkles } from 'lucide-react';
 
 const COLORS = ['#a8d5ba', '#fbc490', '#f4a261', '#e76f51', '#2a9d8f', '#264653', '#e9c46a', '#8ab17d'];
 
@@ -12,23 +13,52 @@ export default function Dashboard() {
   const [budgetSettings, setBudgetSettings] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const [timeframe, setTimeframe] = useState('month');
+  const [aiSummary, setAiSummary] = useState('');
+  const [summaryLoading, setSummaryLoading] = useState(false);
+
   useEffect(() => {
     fetchDashboardData();
-  }, [user]);
+    setAiSummary(''); // Reset summary when timeframe changes
+  }, [user, timeframe]);
 
   const fetchDashboardData = async () => {
     try {
-      const now = new Date();
-      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString();
+      let startOfPeriod, endOfPeriod;
+
+      if (timeframe === 'day') {
+        const d = new Date();
+        d.setHours(0,0,0,0);
+        startOfPeriod = d.toISOString();
+        const e = new Date();
+        e.setHours(23,59,59,999);
+        endOfPeriod = e.toISOString();
+      } else if (timeframe === 'week') {
+        const d = new Date();
+        const first = d.getDate() - d.getDay();
+        const start = new Date(d.setDate(first));
+        start.setHours(0,0,0,0);
+        startOfPeriod = start.toISOString();
+        const end = new Date(start);
+        end.setDate(end.getDate() + 6);
+        end.setHours(23,59,59,999);
+        endOfPeriod = end.toISOString();
+      } else if (timeframe === 'month') {
+        const d = new Date();
+        startOfPeriod = new Date(d.getFullYear(), d.getMonth(), 1).toISOString();
+        endOfPeriod = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59).toISOString();
+      } else {
+        startOfPeriod = new Date(2000, 0, 1).toISOString();
+        endOfPeriod = new Date(2100, 0, 1).toISOString();
+      }
 
       const [expensesRes, budgetRes] = await Promise.all([
         supabase
           .from('expenses')
           .select('*')
           .eq('user_id', user.id)
-          .gte('date', startOfMonth)
-          .lte('date', endOfMonth)
+          .gte('date', startOfPeriod)
+          .lte('date', endOfPeriod)
           .order('date', { ascending: false }),
         supabase
           .from('budget_settings')
@@ -64,6 +94,20 @@ export default function Dashboard() {
     }
   };
 
+  const generateSummary = async () => {
+    if (expenses.length === 0) return;
+    setSummaryLoading(true);
+    try {
+      const result = await getSpendingSummaryWithGemini(expenses);
+      setAiSummary(result);
+    } catch (err) {
+      console.error(err);
+      setAiSummary("Failed to load summary.");
+    } finally {
+      setSummaryLoading(false);
+    }
+  };
+
   if (loading) return <div className="flex justify-center p-8">Loading dashboard...</div>;
 
   const totalSpent = expenses.reduce((sum, exp) => sum + Number(exp.amount), 0);
@@ -95,9 +139,27 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Dashboard</h1>
-        <p className="text-gray-500 dark:text-gray-400">Overview of your spending this month.</p>
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+        <div>
+          <h1 className="text-3xl font-bold mb-2">Dashboard</h1>
+          <p className="text-gray-500 dark:text-gray-400">Overview of your spending habits.</p>
+        </div>
+        
+        <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
+          {['day', 'week', 'month', 'all'].map((t) => (
+            <button
+              key={t}
+              onClick={() => setTimeframe(t)}
+              className={`px-4 py-2 text-sm font-medium rounded-md capitalize transition-colors ${
+                timeframe === t 
+                  ? 'bg-white dark:bg-gray-700 shadow text-gray-900 dark:text-white' 
+                  : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+              }`}
+            >
+              {t === 'all' ? 'All Time' : `This ${t}`}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -109,7 +171,7 @@ export default function Dashboard() {
           <TrendingDown className="text-soft-orange mt-4" size={24} />
         </div>
         
-        {income !== null ? (
+        {income !== null && timeframe === 'month' ? (
           <div className={`card p-6 flex flex-col justify-between border-t-4 ${remainingBudget < 0 ? 'border-t-red-500' : 'border-t-soft-green'}`}>
             <div>
               <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Remaining Budget</p>
@@ -121,10 +183,43 @@ export default function Dashboard() {
           </div>
         ) : (
           <div className="card p-6 flex flex-col items-center justify-center text-center bg-gray-50 dark:bg-gray-800/50">
-            <p className="text-sm text-gray-500">Set your monthly income in Settings to see remaining budget.</p>
+            <p className="text-sm text-gray-500">
+              {timeframe === 'month' 
+                ? "Set your monthly income in Settings to see remaining budget." 
+                : "Remaining budget is only calculated for the 'This Month' view."}
+            </p>
           </div>
         )}
       </div>
+
+      {expenses.length > 0 && (
+        <div className="card p-6 border-l-4 border-l-soft-orange bg-gradient-to-br from-soft-orange/10 to-transparent">
+          <div className="flex justify-between items-start mb-2">
+            <h2 className="text-lg font-bold flex items-center gap-2">
+              <Sparkles className="text-soft-orange" size={20} /> AI Spending Summary
+            </h2>
+            {!aiSummary && (
+              <button 
+                onClick={generateSummary}
+                disabled={summaryLoading}
+                className="btn-primary text-sm py-1.5 px-4"
+              >
+                {summaryLoading ? 'Analyzing...' : 'Generate Insight'}
+              </button>
+            )}
+          </div>
+          
+          {aiSummary ? (
+            <p className="text-gray-700 dark:text-gray-300 mt-2 leading-relaxed">
+              {aiSummary}
+            </p>
+          ) : (
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+              Click generate to get an AI-powered summary of your spending for this period.
+            </p>
+          )}
+        </div>
+      )}
 
       {expenses.length === 0 ? (
         <div className="card p-12 text-center text-gray-500">
