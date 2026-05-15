@@ -101,7 +101,7 @@ export default function LogExpense() {
             disabled={loading || parsedData !== null}
           />
         </div>
-        
+
         {!parsedData && (
           <div className="mt-4 flex justify-end">
             <button
@@ -110,7 +110,7 @@ export default function LogExpense() {
               className="btn-primary flex items-center gap-2"
             >
               <Bot size={20} />
-              {loading ? 'Analyzing...' : 'Parse Expense'}
+              {loading ? 'Analyzing...' : 'Log Expense'}
             </button>
           </div>
         )}
@@ -121,16 +121,16 @@ export default function LogExpense() {
           <h2 className="text-lg font-semibold flex items-center gap-2">
             <Check className="text-soft-green" /> Confirm Expenses ({parsedData.length})
           </h2>
-          
+
           <div className="space-y-6">
             {parsedData.map((item, index) => (
               <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-6 border-b border-[var(--border-color)] last:border-0 last:pb-0">
                 <div>
                   <label className="mb-1 block text-sm text-gray-500">Amount (₱)</label>
-                  <input 
-                    type="number" 
-                    className="input text-xl font-bold" 
-                    value={item.amount || ''} 
+                  <input
+                    type="number"
+                    className="input text-xl font-bold"
+                    value={item.amount || ''}
                     onChange={(e) => {
                       const newData = [...parsedData];
                       newData[index].amount = e.target.value;
@@ -138,11 +138,11 @@ export default function LogExpense() {
                     }}
                   />
                 </div>
-                
+
                 <div>
                   <label className="mb-1 block text-sm text-gray-500">Category</label>
-                  <select 
-                    className="input" 
+                  <select
+                    className="input"
                     value={item.category || 'Others'}
                     onChange={(e) => {
                       const newData = [...parsedData];
@@ -153,12 +153,12 @@ export default function LogExpense() {
                     {categories.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
-                
+
                 <div className="md:col-span-2">
                   <label className="mb-1 block text-sm text-gray-500">Description</label>
-                  <input 
-                    type="text" 
-                    className="input" 
+                  <input
+                    type="text"
+                    className="input"
                     value={item.description || ''}
                     onChange={(e) => {
                       const newData = [...parsedData];
@@ -170,16 +170,16 @@ export default function LogExpense() {
               </div>
             ))}
           </div>
-          
+
           <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-[var(--border-color)]">
-            <button 
+            <button
               onClick={() => setParsedData(null)}
               className="btn-secondary"
               disabled={loading}
             >
               Cancel
             </button>
-            <button 
+            <button
               onClick={handleSave}
               className="btn-primary"
               disabled={loading}

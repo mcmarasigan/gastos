@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Lightbulb, AlertCircle, CheckCircle } from 'lucide-react';
+import { Lightbulb, AlertCircle, CheckCircle, Eye, EyeOff } from 'lucide-react';
 
 const MessageDialog = ({ isOpen, type, message, onClose }) => {
   if (!isOpen) return null;
@@ -17,6 +17,41 @@ const MessageDialog = ({ isOpen, type, message, onClose }) => {
         <p className="text-gray-600 dark:text-gray-300 mb-6">{message}</p>
         <button onClick={onClose} className={type === 'error' ? 'btn-secondary w-full' : 'btn-primary w-full'}>
           {type === 'error' ? 'Try Again' : 'Continue'}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// Reusable password input with show/hide toggle
+const PasswordInput = ({ id, label, value, onChange, disabled, placeholder = '••••••••', required = true }) => {
+  const [visible, setVisible] = useState(false);
+
+  return (
+    <div>
+      <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300" htmlFor={id}>
+        {label}
+      </label>
+      <div className="relative">
+        <input
+          id={id}
+          type={visible ? 'text' : 'password'}
+          required={required}
+          disabled={disabled}
+          className="input w-full pr-10 disabled:opacity-50"
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder}
+        />
+        <button
+          type="button"
+          tabIndex={-1}
+          disabled={disabled}
+          onClick={() => setVisible((v) => !v)}
+          className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 focus:outline-none disabled:opacity-50 transition-colors"
+          aria-label={visible ? 'Hide password' : 'Show password'}
+        >
+          {visible ? <EyeOff size={16} /> : <Eye size={16} />}
         </button>
       </div>
     </div>
@@ -46,7 +81,6 @@ export default function Login() {
   const { signIn, signUp, resetPassword } = useAuth();
   const navigate = useNavigate();
 
-  // Helper functions to update state and localStorage together
   const updateFailedAttempts = (attempts) => {
     setFailedAttempts(attempts);
     localStorage.setItem('gastos_failed_attempts', attempts.toString());
@@ -64,7 +98,6 @@ export default function Login() {
   React.useEffect(() => {
     let timer;
     if (lockoutUntil && lockoutUntil > Date.now()) {
-      // Set initial countdown
       setCountdown(Math.ceil((lockoutUntil - Date.now()) / 1000));
       
       timer = setInterval(() => {
@@ -72,14 +105,13 @@ export default function Login() {
         if (remaining <= 0) {
           updateLockoutUntil(null);
           setCountdown(0);
-          updateFailedAttempts(0); // Forgive them after waiting
+          updateFailedAttempts(0);
           clearInterval(timer);
         } else {
           setCountdown(remaining);
         }
       }, 1000);
     } else if (lockoutUntil && lockoutUntil <= Date.now()) {
-      // Time already passed while away
       updateLockoutUntil(null);
       updateFailedAttempts(0);
     }
@@ -100,7 +132,7 @@ export default function Login() {
       return false;
     }
     
-    if (isResetPassword) return true; // Skip password validation for reset
+    if (isResetPassword) return true;
 
     if (password.length < 6) {
       showDialog('error', 'Password must be at least 6 characters long.');
@@ -136,7 +168,6 @@ export default function Login() {
           }
           throw error;
         }
-        // Success
         updateFailedAttempts(0);
         navigate('/');
       } else {
@@ -155,7 +186,7 @@ export default function Login() {
         updateFailedAttempts(newAttempts);
         
         if (newAttempts >= 3) {
-          updateLockoutUntil(Date.now() + 30000); // Lock out for 30 seconds
+          updateLockoutUntil(Date.now() + 30000);
           updateFailedAttempts(0);
           showDialog('error', 'Too many failed attempts. For your security, you have been temporarily locked out. Please wait 30 seconds.');
         } else {
@@ -219,27 +250,19 @@ export default function Login() {
               className="input w-full disabled:opacity-50"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="juan@example.com"
+              placeholder="juan@gmail.com"
             />
           </div>
           
           {!isResetPassword && (
             <>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300" htmlFor="password">
-                  Password
-                </label>
-                <input
-                  id="password"
-                  type="password"
-                  required
-                  disabled={isLocked || loading}
-                  className="input w-full disabled:opacity-50"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                />
-              </div>
+              <PasswordInput
+                id="password"
+                label="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={isLocked || loading}
+              />
 
               {isLogin && (
                 <div className="flex justify-end mt-1">
@@ -258,18 +281,12 @@ export default function Login() {
 
               {!isLogin && (
                 <div className="animate-in fade-in slide-in-from-top-2 duration-300">
-                  <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300" htmlFor="confirmPassword">
-                    Confirm Password
-                  </label>
-                  <input
+                  <PasswordInput
                     id="confirmPassword"
-                    type="password"
-                    required={!isLogin}
-                    disabled={isLocked || loading}
-                    className="input w-full disabled:opacity-50"
+                    label="Confirm Password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="••••••••"
+                    disabled={isLocked || loading}
                   />
                 </div>
               )}
