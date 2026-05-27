@@ -7,6 +7,7 @@ import { Lightbulb, Sparkles, AlertCircle } from 'lucide-react';
 export default function BudgetAdvisor() {
   const { user } = useAuth();
   const [income, setIncome] = useState('');
+  const [specificQuestion, setSpecificQuestion] = useState('');
   const [advice, setAdvice] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -81,17 +82,22 @@ export default function BudgetAdvisor() {
       const now = new Date();
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
       const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString();
+      const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
+      const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0).toISOString();
 
-      const { data: expenses, error: expensesError } = await supabase
-        .from('expenses')
-        .select('*')
-        .eq('user_id', user.id)
-        .gte('date', startOfMonth)
-        .lte('date', endOfMonth);
+      const [expensesRes, prevExpensesRes, goalsRes] = await Promise.all([
+        supabase.from('expenses').select('*').eq('user_id', user.id).gte('date', startOfMonth).lte('date', endOfMonth),
+        supabase.from('expenses').select('*').eq('user_id', user.id).gte('date', startOfLastMonth).lte('date', endOfLastMonth),
+        supabase.from('savings_goals').select('*').eq('user_id', user.id)
+      ]);
 
-      if (expensesError) throw expensesError;
+      if (expensesRes.error) throw expensesRes.error;
 
-      const geminiAdvice = await getBudgetAdviceWithGemini(income, expenses || []);
+      const expenses = expensesRes.data || [];
+      const previousExpenses = prevExpensesRes.data || [];
+      const activeGoals = goalsRes.error ? [] : (goalsRes.data || []);
+
+      const geminiAdvice = await getBudgetAdviceWithGemini(income, expenses, previousExpenses, activeGoals, specificQuestion);
       setAdvice(geminiAdvice);
 
       // Save to history table
@@ -158,17 +164,29 @@ export default function BudgetAdvisor() {
         <label className="mb-2 block font-medium" htmlFor="income">
           What is your estimated monthly income? (e.g. ₱35000)
         </label>
-        <div className="flex gap-4">
-          <div className="relative flex-1">
-            <input
-              id="income"
-              type="number"
-              className="input text-lg"
-              placeholder="35000"
-              value={income}
-              onChange={(e) => setIncome(e.target.value)}
-            />
-          </div>
+        <div className="mb-4">
+          <input
+            id="income"
+            type="number"
+            className="input text-lg w-full"
+            placeholder="35000"
+            value={income}
+            onChange={(e) => setIncome(e.target.value)}
+          />
+        </div>
+
+        <label className="mb-2 block font-medium" htmlFor="question">
+          Any specific goal or context? (Optional, e.g. "My pay is split 15th/30th", "Saving for a trip")
+        </label>
+        <textarea
+          id="question"
+          className="input w-full h-24 resize-none mb-4"
+          placeholder="e.g., How can I budget for a trip to Japan next year considering my salary is split on the 15th and 30th?"
+          value={specificQuestion}
+          onChange={(e) => setSpecificQuestion(e.target.value)}
+        ></textarea>
+
+        <div className="flex justify-end">
           <button 
             onClick={handleGetAdvice} 
             disabled={loading}

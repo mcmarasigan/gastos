@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
-import { getSpendingSummaryWithGemini } from '../lib/gemini';
+import { getSpendingSummaryWithGemini, getMiniTipWithGemini } from '../lib/gemini';
+import SavingsGoals from '../components/SavingsGoals';
 import { PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
-import { Trash2, TrendingUp, TrendingDown, Wallet, Sparkles } from 'lucide-react';
+import { Trash2, TrendingUp, TrendingDown, Wallet, Sparkles, Lightbulb } from 'lucide-react';
 
 const COLORS = ['#a8d5ba', '#fbc490', '#f4a261', '#e76f51', '#2a9d8f', '#264653', '#e9c46a', '#8ab17d'];
 
@@ -12,6 +13,7 @@ export default function Dashboard() {
   const [expenses, setExpenses] = useState([]);
   const [budgetSettings, setBudgetSettings] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [miniTip, setMiniTip] = useState('');
 
   const [timeframe, setTimeframe] = useState('month');
   const [aiSummary, setAiSummary] = useState('');
@@ -73,8 +75,17 @@ export default function Dashboard() {
         throw budgetRes.error;
       }
 
-      setExpenses(expensesRes.data || []);
+      const fetchedExpenses = expensesRes.data || [];
+      setExpenses(fetchedExpenses);
       setBudgetSettings(budgetRes.data || null);
+
+      // Generate Mini Tip
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      const recentExpenses = fetchedExpenses.filter(e => new Date(e.date) >= sevenDaysAgo);
+      if (recentExpenses.length > 0) {
+        getMiniTipWithGemini(recentExpenses).then(setMiniTip).catch(console.error);
+      }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
@@ -111,8 +122,21 @@ export default function Dashboard() {
   if (loading) return <div className="flex justify-center p-8">Loading dashboard...</div>;
 
   const totalSpent = expenses.reduce((sum, exp) => sum + Number(exp.amount), 0);
-  const income = budgetSettings?.monthly_income ? Number(budgetSettings.monthly_income) : null;
-  const remainingBudget = income !== null ? income - totalSpent : null;
+  
+  let viewIncome = null;
+  if (budgetSettings?.monthly_income) {
+    const monthlyIncome = Number(budgetSettings.monthly_income);
+    if (timeframe === 'month') {
+      viewIncome = monthlyIncome;
+    } else if (timeframe === 'week') {
+      viewIncome = monthlyIncome / 4.333; // Average weeks in a month
+    } else if (timeframe === 'day') {
+      const daysInCurrentMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
+      viewIncome = monthlyIncome / daysInCurrentMonth;
+    }
+  }
+
+  const remainingBudget = viewIncome !== null ? viewIncome - totalSpent : null;
 
   // Chart data preparation
   const categoryData = expenses.reduce((acc, exp) => {
@@ -162,7 +186,14 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {miniTip && (
+        <div className="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 p-4 rounded-r-lg mb-6 flex gap-3 items-center">
+          <Lightbulb className="text-blue-500 flex-shrink-0" size={20} />
+          <p className="text-sm text-blue-800 dark:text-blue-200 font-medium">Insight: {miniTip}</p>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         <div className="card p-6 flex flex-col justify-between border-t-4 border-t-soft-orange">
           <div>
             <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Spent</p>
@@ -171,12 +202,14 @@ export default function Dashboard() {
           <TrendingDown className="text-soft-orange mt-4" size={24} />
         </div>
         
-        {income !== null && timeframe === 'month' ? (
+        {viewIncome !== null ? (
           <div className={`card p-6 flex flex-col justify-between border-t-4 ${remainingBudget < 0 ? 'border-t-red-500' : 'border-t-soft-green'}`}>
             <div>
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Remaining Budget</p>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                {timeframe === 'day' ? "Daily Budget Left" : timeframe === 'week' ? "Weekly Budget Left" : "Monthly Budget Left"}
+              </p>
               <p className={`text-3xl font-bold mt-2 ${remainingBudget < 0 ? 'text-red-500' : ''}`}>
-                ₱{remainingBudget.toLocaleString()}
+                ₱{Math.round(remainingBudget).toLocaleString()}
               </p>
             </div>
             <Wallet className={remainingBudget < 0 ? 'text-red-500 mt-4' : 'text-soft-green mt-4'} size={24} />
@@ -184,13 +217,15 @@ export default function Dashboard() {
         ) : (
           <div className="card p-6 flex flex-col items-center justify-center text-center bg-gray-50 dark:bg-gray-800/50">
             <p className="text-sm text-gray-500">
-              {timeframe === 'month' 
-                ? "Set your monthly income in Settings to see remaining budget." 
-                : "Remaining budget is only calculated for the 'This Month' view."}
+              {timeframe === 'all' 
+                ? "Budget tracking is not available for 'All Time' view." 
+                : "Set your monthly income in Settings to see remaining budget."}
             </p>
           </div>
         )}
       </div>
+
+      <SavingsGoals />
 
       {expenses.length > 0 && (
         <div className="card p-6 border-l-4 border-l-soft-orange bg-gradient-to-br from-soft-orange/10 to-transparent">
